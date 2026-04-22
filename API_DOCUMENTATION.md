@@ -14,6 +14,7 @@
 8. [Notifications](#8-notifications)
 9. [Files (Uploads)](#9-files-uploads)
 10. [Courses](#10-courses)
+11. [AI Assistant](#11-ai-assistant-unified-ai-system)
 
 ---
 
@@ -217,3 +218,74 @@ A generic service to upload images, resumes, and attachments.
     *   Searches the **YouTube Data API** for Playlists matching the query.
     *   Normalizes standard YouTube playlists into platform "Courses".
     *   Supports `&max_results=...` query param.
+
+---
+
+## 11. AI Assistant (Unified AI System)
+
+A SINGLE intelligent AI endpoint that auto-detects intent and routes to the correct Opal AI agent.
+
+**Endpoint:** `POST /ai/assistant/` (Auth required)
+
+### Request Body
+
+```json
+{
+  "message": "Create a resume for a backend developer",
+  "resume": "(optional) your existing resume text...",
+  "job_title": "(optional) Backend Developer"
+}
+```
+
+### Intent Detection
+
+The system automatically classifies your message:
+
+| Intent | Trigger Words | What Happens |
+|---|---|---|
+| `resume_generate` | "create resume", "build resume", "make resume", "generate resume" | Calls Resume Generator Agent → generates PDF |
+| `resume_improve` | "improve resume", "review resume", "fix resume", "check resume" | Calls Resume Improvement Agent → returns corrections |
+| `career_chat` | Everything else | Calls Career Chatbot Agent → returns advice |
+
+### Response Format
+
+```json
+{
+  "success": true,
+  "message": "AI response ready.",
+  "data": {
+    "intent": "resume_generate",
+    "message": "Resume generated successfully.",
+    "corrections": [],
+    "resume_text": "# John Doe\n## Backend Developer\n...",
+    "pdf_url": "/media/resumes/resume_abc123_20260422.pdf",
+    "pdf_required": true
+  }
+}
+```
+
+### Response by Intent
+
+**resume_generate:**
+*   `pdf_required` = `true`
+*   `pdf_url` contains the download link to the generated PDF
+*   `resume_text` contains the raw text
+*   `corrections` = `[]`
+
+**resume_improve:**
+*   `pdf_required` = `false`
+*   `corrections` = list of improvement suggestions
+*   `resume_text` = `""`
+
+**career_chat:**
+*   `pdf_required` = `false`
+*   `message` = AI career advice reply
+*   `corrections` = `[]`, `resume_text` = `""`
+
+### RBAC Rules
+*   All authenticated users can use `career_chat`
+*   Resume features (`resume_generate`, `resume_improve`) are restricted to `job_seeker` and `admin` roles
+
+### Conversation Memory
+All interactions are automatically saved in the existing chat system under a dedicated "Uphirex AI Assistant" room per user.
+

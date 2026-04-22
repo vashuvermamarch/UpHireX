@@ -17,7 +17,8 @@ def api_root(request):
             "/api/v1/auth/login/",
             "/api/v1/jobs/",
             "/api/v1/profiles/",
-            "/api/v1/organizations/"
+            "/api/v1/organizations/",
+            "/api/v1/ai/assistant/"
         ]
     })
 
@@ -36,6 +37,7 @@ urlpatterns = [
     path('api/v1/', include('notifications.urls')),
     path('api/v1/', include('files.urls')),
     path('api/v1/', include('courses.urls')),
+    path('api/v1/', include('ai.urls')),
 ]
 
 if settings.DEBUG:

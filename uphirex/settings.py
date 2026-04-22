@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'notifications',
     'files',
     'courses',
+    'ai',
 ]
 
 MIDDLEWARE = [
@@ -160,3 +161,6 @@ CHANNEL_LAYERS = {
 ADZUNA_APP_ID = env('ADZUNA_APP_ID', default='')
 ADZUNA_APP_KEY = env('ADZUNA_APP_KEY', default='')
 YOUTUBE_API_KEY = env('YOUTUBE_API_KEY', default='')
+
+# Opal AI Agents
+OPAL_API_KEY = env('OPAL_API_KEY', default='')

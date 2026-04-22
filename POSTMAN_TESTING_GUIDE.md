@@ -1,402 +1,238 @@
-# 🧪 Uphirex API — Complete Postman Testing Guide
+# Uphirex – Postman Testing Guide
 
-**Base URL:** `http://localhost:8000/api/v1/`
+A step-by-step guide to test every API endpoint in Postman.
 
-> ⚠️ **IMPORTANT:** Follow the steps **IN EXACT ORDER**. Each step depends on data from previous steps. Skipping steps will cause errors.
+**Base URL:** `http://127.0.0.1:8000/api/v1`
 
 ---
 
-## 🏁 Pre-Requisites
+## 🔧 Postman Setup
 
-### 1. Start the Django Server
-```bash
-cd d:\uphirex
-python manage.py runserver
-```
+### 1. Create an Environment
 
-### 2. Postman Setup
-- Create a new **Collection** called `Uphirex API`
-- Create these **Collection Variables** (you'll fill them as you go):
+Go to **Environments → New** and create `Uphirex Local` with these variables:
 
-| Variable | Description |
+| Variable | Initial Value |
 |---|---|
-| `base_url` | `http://localhost:8000/api/v1` |
-| `access_token` | JWT access token (from login) |
-| `refresh_token` | JWT refresh token (from login) |
-| `user_id` | Your user's UUID (from login) |
-| `user2_id` | Second user's UUID |
-| `access_token_2` | Second user's access token |
-| `access_token_admin` | Admin user's access token |
-| `admin_user_id` | Admin user's UUID |
-| `org_id` | Organization UUID |
-| `profile_id` | Profile UUID |
-| `skill_id` | Skill UUID |
-| `skill_id_2` | Second Skill UUID |
-| `job_id` | Job UUID |
-| `application_id` | Application UUID |
-| `connection_id` | Connection UUID |
-| `chat_room_id` | Chat room UUID |
-| `message_id` | Message UUID |
-| `notification_id` | Notification UUID |
+| `base_url` | `http://127.0.0.1:8000/api/v1` |
+| `access_token` | *(leave blank – auto-filled on login)* |
+| `refresh_token` | *(leave blank – auto-filled on login)* |
+| `user_id` | *(leave blank – auto-filled on login)* |
+
+### 2. Set Authorization (Global)
+
+For every request **except** signup/verify/login, go to the **Authorization** tab and set:
+
+*   **Type:** Bearer Token
+*   **Token:** `{{access_token}}`
+
+Or set this once at the **Collection level** so all requests inherit it.
 
 ---
 
-## 📋 Testing Flow Overview
+## 📋 Test Flow (Recommended Order)
+
+Follow this exact order to test the full platform end-to-end:
+
+---
+
+## 1. Authentication
+
+### 1.1 Signup
 
 ```
-Step 1:  Health Check
-Step 2:  Signup User 1 (job_seeker)
-Step 3:  Verify Signup (OTP)
-Step 4:  Login User 1
-Step 5:  Get Current User (/auth/me/)
-Step 6:  Signup + Verify + Login User 2
-Step 7:  Create Admin via Django Shell
-Step 8:  Login as Admin
-Step 9:  Profile APIs
-Step 10: Skills (Admin creates)
-Step 11: User Skills
-Step 12: Organizations
-Step 13: Jobs
-Step 14: Job Skills
-Step 15: Saved Jobs
-Step 16: Applications
-Step 17: Application Reviews
-Step 18: Connections
-Step 19: Chat
-Step 20: Notifications
-Step 21: File Uploads
-Step 22: Courses
-Step 23: User Management
-Step 24: Logout
+POST {{base_url}}/auth/signup/
 ```
 
----
-
-## PHASE 1: Authentication (Steps 1–8)
-
----
-
-### ✅ Step 1 — Health Check (API Root)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `http://localhost:8000/` |
-| **Auth** | None |
-
-**Expected Response** (200 OK):
+**Body (JSON):**
 ```json
 {
-  "success": true,
-  "message": "Welcome to Uphirex API v1",
-  "endpoints": ["/api/v1/auth/signup/", "..."]
+  "username": "testuser",
+  "email": "testuser@example.com",
+  "password": "Test@1234",
+  "displayName": "Test User",
+  "role": "job_seeker",
+  "phone": "9876543210"
 }
 ```
 
-> 💡 If this fails, your server isn't running. Run `python manage.py runserver`.
+**Expected:** `200 OK` – Returns OTP. Copy the `otp` from the response.
 
 ---
 
-### ✅ Step 2 — Signup (User 1 — Job Seeker)
+### 1.2 Verify Signup
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/auth/signup/` |
-| **Auth** | None |
-| **Body Type** | raw → JSON |
+```
+POST {{base_url}}/auth/verify_signup/
+```
 
-**Request Body:**
+**Body (JSON):**
 ```json
 {
-  "username": "testseeker",
-  "email": "testseeker@example.com",
-  "password": "Test@12345",
-  "displayName": "Test Seeker",
-  "role": "job_seeker"
+  "email": "testuser@example.com",
+  "otp": "PASTE_OTP_HERE"
 }
 ```
 
-**Expected Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "OTP sent successfully.",
-  "data": {
-    "email": "testseeker@example.com",
-    "otp": "123456"
-  }
-}
-```
-
-> 🔑 **SAVE the `otp` value** from the response! You need it for the next step.  
-> In dev mode, the OTP is returned directly in the response (not sent via email).
+**Expected:** `201 Created` – User created, returns `signup_token`.
 
 ---
 
-### ✅ Step 3 — Verify Signup (OTP)
+### 1.3 Login
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/auth/verify_signup/` |
-| **Auth** | None |
-| **Body Type** | raw → JSON |
+```
+POST {{base_url}}/auth/login/
+```
 
-**Request Body:**
+**Body (JSON):**
 ```json
 {
-  "email": "testseeker@example.com",
-  "otp": "PASTE_OTP_FROM_STEP_2"
+  "email": "testuser@example.com",
+  "password": "Test@1234"
 }
 ```
 
-**Expected Response** (201 Created):
-```json
-{
-  "success": true,
-  "message": "Signup verified.",
-  "data": {
-    "user": {
-      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "username": "testseeker",
-      "email": "testseeker@example.com",
-      "role": "job_seeker"
-    },
-    "signup_token": "..."
-  }
+**Expected:** `200 OK` – Returns `access` and `refresh` tokens.
+
+**⚡ Auto-save tokens (Tests tab script):**
+```javascript
+var data = pm.response.json();
+if (data.success) {
+    pm.environment.set("access_token", data.data.access);
+    pm.environment.set("refresh_token", data.data.refresh);
+    pm.environment.set("user_id", data.data.user.id);
 }
-```
-
-> ⚠️ The OTP expires in **5 minutes** (300 seconds). If you get "Invalid or expired OTP", go back to Step 2 and signup again to get a fresh OTP.
-
----
-
-### ✅ Step 4 — Login (User 1)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/auth/login/` |
-| **Auth** | None |
-| **Body Type** | raw → JSON |
-
-**Request Body:**
-```json
-{
-  "email": "testseeker@example.com",
-  "password": "Test@12345"
-}
-```
-
-**Expected Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Login successful.",
-  "data": {
-    "user": {
-      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    },
-    "refresh": "eyJ...",
-    "access": "eyJ..."
-  }
-}
-```
-
-> 🔑 **SAVE THESE VALUES** as Postman variables:
-> - `access_token` ← `data.access`
-> - `refresh_token` ← `data.refresh`
-> - `user_id` ← `data.user.id`
->
-> **Pro Tip**: Add this to the request's **Tests** tab to auto-save:
-> ```javascript
-> if (pm.response.code === 200) {
->     var json = pm.response.json();
->     pm.collectionVariables.set("access_token", json.data.access);
->     pm.collectionVariables.set("refresh_token", json.data.refresh);
->     pm.collectionVariables.set("user_id", json.data.user.id);
-> }
-> ```
-
----
-
-### ✅ Step 5 — Get Current User (`/auth/me/`)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/auth/me/` |
-| **Auth Tab** | Type: **Bearer Token** → Token: `{{access_token}}` |
-
-**Expected Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Authenticated user.",
-  "data": {
-    "id": "...",
-    "username": "testseeker",
-    "role": "job_seeker"
-  }
-}
-```
-
-> ⚠️ If you get **401 Unauthorized**, your access token is expired or incorrect. Go back to Step 4 and login again.
-
----
-
-### ✅ Step 6 — Create User 2 (Repeat Steps 2–4 for Second User)
-
-You need a second user for testing connections, chat, etc.
-
-**6a. Signup User 2:**
-```json
-{
-  "username": "testseeker2",
-  "email": "testseeker2@example.com",
-  "password": "Test@12345",
-  "displayName": "Test Seeker Two",
-  "role": "job_seeker"
-}
-```
-
-**6b. Verify User 2** — use the OTP from 6a response.
-
-**6c. Login User 2** and save:
-- `access_token_2` ← `data.access`
-- `user2_id` ← `data.user.id`
-
----
-
-### ✅ Step 7 — Create an Admin User (via Django Shell)
-
-> ⚠️ **Admin and HR accounts cannot be created purely through the API.** You need to use the Django shell.
-
-Open a **new terminal** and run:
-```bash
-cd d:\uphirex
-python manage.py shell
-```
-
-Then execute:
-```python
-from authapp.models import User
-admin = User.objects.create_superuser(
-    username='adminuser',
-    email='admin@example.com',
-    password='Admin@12345',
-    displayName='Admin User',
-    role='admin'
-)
-admin.email_verified = True
-admin.save()
-print(f"Admin created: {admin.id}")
-exit()
 ```
 
 ---
 
-### ✅ Step 8 — Login as Admin
+### 1.4 Get Current User
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/auth/login/` |
-| **Body Type** | raw → JSON |
+```
+GET {{base_url}}/auth/me/
+```
 
+**Auth:** Bearer `{{access_token}}`
+
+**Expected:** `200 OK` – Your user profile.
+
+---
+
+### 1.5 User Lookup
+
+```
+GET {{base_url}}/auth/user/{{user_id}}/
+```
+
+**Expected:** `200 OK` – User data for that ID.
+
+---
+
+### 1.6 Logout
+
+```
+POST {{base_url}}/auth/logout/
+```
+
+**Body (JSON):**
 ```json
 {
-  "email": "admin@example.com",
-  "password": "Admin@12345"
+  "refresh": "{{refresh_token}}"
 }
 ```
 
-🔑 **Save** `access_token_admin` and `admin_user_id` from the response.
+**Expected:** `200 OK` – Token revoked.
 
-> 💡 Keep all 3 tokens saved — you'll switch between them:
-> - `access_token` → Job Seeker 1
-> - `access_token_2` → Job Seeker 2
-> - `access_token_admin` → Admin
+> ⚠️ **Don't test this yet** — you need the token for the remaining tests. Test logout last.
 
 ---
 
-## PHASE 2: Profiles & Skills (Steps 9–11)
+## 2. Organizations
 
-> From here on, use **Bearer Token** auth header for every request:  
-> `Authorization: Bearer {{access_token}}` (switch token based on which user you're testing as)
+### 2.1 Create Organization (HR/Admin only)
 
----
+First, login as admin (`admin@example.com`) or create an HR user.
 
-### ✅ Step 9 — Profile APIs
+```
+POST {{base_url}}/organizations/
+```
 
-**9a. Get My Profile** (auto-creates if doesn't exist)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/profiles/me/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-🔑 **Save** `profile_id` ← `data.user` (this is the user UUID, which is the profile PK)
-
-**9b. Update My Profile**
-
-| Field | Value |
-|---|---|
-| **Method** | `PATCH` |
-| **URL** | `{{base_url}}/profiles/{{profile_id}}/` |
-| **Auth** | Bearer `{{access_token}}` |
-
+**Body (JSON):**
 ```json
 {
-  "headline": "Full Stack Developer",
-  "summary": "3+ years of experience in Django and React",
+  "name": "Uphirex Technologies",
+  "description": "AI-powered hiring platform",
+  "website": "https://uphirex.com",
+  "industry": "Technology",
+  "location": "Bangalore, India",
+  "size": "50-200",
+  "is_verified": true
+}
+```
+
+**Expected:** `201 Created`
+
+---
+
+### 2.2 List Organizations
+
+```
+GET {{base_url}}/organizations/
+```
+
+**Expected:** `200 OK` – List of all orgs.
+
+---
+
+### 2.3 Get Single Organization
+
+```
+GET {{base_url}}/organizations/{org_id}/
+```
+
+---
+
+## 3. Profiles & Skills
+
+### 3.1 Get My Profile
+
+```
+GET {{base_url}}/profiles/me/
+```
+
+**Expected:** `200 OK` – Auto-creates profile if one doesn't exist.
+
+---
+
+### 3.2 Update Profile
+
+```
+PATCH {{base_url}}/profiles/{profile_id}/
+```
+
+**Body (JSON):**
+```json
+{
+  "headline": "Full Stack Developer | Django | React",
   "location": "Mumbai, India",
-  "current_company": "TechCorp",
-  "total_experience": 3,
-  "availability_status": "active"
+  "current_company": "Uphirex Technologies",
+  "experience_years": 3,
+  "availability_status": "open_to_work",
+  "linkedin_url": "https://linkedin.com/in/testuser",
+  "github_url": "https://github.com/testuser",
+  "portfolio_url": "https://testuser.dev"
 }
 ```
 
-**9c. List All Profiles**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/profiles/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**9d. View Another User's Profile** (triggers profile view tracking)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/profiles/{{user2_id}}/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-> 📝 User 2 must have a profile first. Login as User 2 and hit `GET /profiles/me/` to auto-create it.
-
-**9e. Get Profile Views** (who viewed my profile)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/profiles/{{user2_id}}/views/` |
-| **Auth** | Bearer `{{access_token_2}}` ← must be the profile owner |
-
 ---
 
-### ✅ Step 10 — Skills (Admin Only for Create)
+### 3.3 Create a Skill (Admin only)
 
-**10a. Create a Skill** (use Admin token)
+```
+POST {{base_url}}/skills/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/skills/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
+**Body (JSON):**
 ```json
 {
   "name": "Python",
@@ -404,670 +240,588 @@ exit()
 }
 ```
 
-🔑 **Save** `skill_id` ← `data.id`
-
-**10b. Create another Skill**
-```json
-{
-  "name": "Django",
-  "category": "Web Framework"
-}
-```
-
-🔑 **Save** `skill_id_2` ← `data.id`
-
-**10c. List All Skills** (any authenticated user)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/skills/` |
-| **Auth** | Bearer `{{access_token}}` |
-
 ---
 
-### ✅ Step 11 — User Skills
+### 3.4 Add Skill to My Profile
 
-**11a. Add a Skill to My Profile** (as Job Seeker)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/user-skills/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-```json
-{
-  "skill": "{{skill_id}}",
-  "proficiency_level": "intermediate"
-}
+```
+POST {{base_url}}/user-skills/
 ```
 
-**11b. List My Skills**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/user-skills/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**11c. Get Skills of a Specific User**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/user-skills/user/{{user_id}}/` |
-| **Auth** | Bearer `{{access_token}}` |
-
----
-
-## PHASE 3: Organizations (Step 12)
-
----
-
-### ✅ Step 12 — Organizations (Admin/HR Only for Create)
-
-**12a. Create Organization** (use Admin token)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/organizations/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
+**Body (JSON):**
 ```json
 {
-  "name": "TechCorp Solutions",
-  "industry": "Information Technology",
-  "location": "Mumbai, India",
-  "description": "Leading IT solutions company"
-}
-```
-
-🔑 **Save** `org_id` ← `data.id`
-
-**12b. List Organizations** (any authenticated user)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/organizations/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**12c. Get Organization Details**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/organizations/{{org_id}}/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**12d. Update Organization** (Admin only)
-
-| Field | Value |
-|---|---|
-| **Method** | `PATCH` |
-| **URL** | `{{base_url}}/organizations/{{org_id}}/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
-```json
-{
-  "description": "Leading IT solutions company in India"
+  "skill": "SKILL_UUID_HERE",
+  "proficiency_level": "advanced"
 }
 ```
 
 ---
 
-## PHASE 4: Jobs (Steps 13–15)
+### 3.5 View Profile (triggers view tracking)
+
+```
+GET {{base_url}}/profiles/{other_user_profile_id}/
+```
 
 ---
 
-### ✅ Step 13 — Job Posts (Admin/HR for Create)
+### 3.6 See Who Viewed My Profile
 
-**13a. Create a Job** (use Admin token)
+```
+GET {{base_url}}/profiles/{my_profile_id}/views/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/jobs/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
+---
 
+## 4. Connections
+
+### 4.1 Send Connection Request
+
+```
+POST {{base_url}}/connections/
+```
+
+**Body (JSON):**
 ```json
 {
-  "title": "Senior Python Developer",
-  "description": "Looking for experienced Python developers",
-  "requirements": "3+ years Python, Django experience",
-  "salary_range": "12L - 18L",
-  "location": "Mumbai, India",
+  "receiver": "OTHER_USER_UUID"
+}
+```
+
+---
+
+### 4.2 View Pending Requests
+
+```
+GET {{base_url}}/connections/pending/
+```
+
+---
+
+### 4.3 Accept Connection (login as receiver)
+
+```
+POST {{base_url}}/connections/{connection_id}/accept/
+```
+
+---
+
+### 4.4 Reject Connection
+
+```
+POST {{base_url}}/connections/{connection_id}/reject/
+```
+
+---
+
+### 4.5 Block Connection
+
+```
+POST {{base_url}}/connections/{connection_id}/block/
+```
+
+---
+
+### 4.6 List All Connections
+
+```
+GET {{base_url}}/connections/
+```
+
+---
+
+## 5. Jobs
+
+### 5.1 Create Job Post (HR/Admin only)
+
+Login as admin or HR user first.
+
+```
+POST {{base_url}}/jobs/
+```
+
+**Body (JSON):**
+```json
+{
+  "title": "Senior Backend Developer",
+  "description": "We are looking for a Senior Backend Developer with 3+ years Django experience.",
+  "requirements": "Python, Django, PostgreSQL, REST APIs, Docker",
+  "location": "Bangalore, India",
+  "salary_range": "15-25 LPA",
+  "employment_type": "full_time",
   "remote": true,
-  "status": "open"
+  "status": "active"
 }
 ```
 
-🔑 **Save** `job_id` ← `data.id`
+---
 
-> 📝 The `organization_id` is auto-set from the logged-in user's `organization_id` field. If the admin user isn't linked to an org, it will be `null` — that's OK.
+### 5.2 List All Jobs (internal + Adzuna merged)
 
-**13b. List All Jobs** (merges internal + Adzuna external)
+```
+GET {{base_url}}/jobs/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/jobs/` |
-| **Auth** | Bearer `{{access_token}}` |
+**With filters:**
+```
+GET {{base_url}}/jobs/?search=python&location=bangalore
+```
 
-> 💡 Add query parameters for search: `{{base_url}}/jobs/?search=python&location=mumbai`
+---
 
-**13c. Get Job Details**
+### 5.3 Save a Job
 
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/jobs/{{job_id}}/` |
-| **Auth** | Bearer `{{access_token}}` |
+```
+POST {{base_url}}/jobs/{job_id}/save_job/
+```
 
-**13d. Update Job** (owner or admin)
+---
 
-| Field | Value |
-|---|---|
-| **Method** | `PATCH` |
-| **URL** | `{{base_url}}/jobs/{{job_id}}/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
+### 5.4 View Saved Jobs
 
+```
+GET {{base_url}}/jobs/saved/
+```
+
+---
+
+### 5.5 Unsave a Job
+
+```
+DELETE {{base_url}}/jobs/{job_id}/unsave_job/
+```
+
+---
+
+## 6. Applications
+
+### 6.1 Apply for a Job (Job Seeker only)
+
+```
+POST {{base_url}}/applications/
+```
+
+**Body (JSON):**
 ```json
 {
-  "salary_range": "15L - 22L"
+  "job": "JOB_UUID_HERE",
+  "cover_letter": "I am excited to apply for this position...",
+  "resume_url": "/media/resumes/resume_xxx.pdf"
 }
 ```
 
 ---
 
-### ✅ Step 14 — Job Skills (Link Skills to Jobs)
+### 6.2 View My Applications
 
-**14a. Add Required Skill to a Job** (Admin/HR)
+```
+GET {{base_url}}/applications/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/job-skills/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
+---
 
+### 6.3 Update Application Status (HR/Admin)
+
+```
+PATCH {{base_url}}/applications/{app_id}/update_status/
+```
+
+**Body (JSON):**
 ```json
 {
-  "job": "{{job_id}}",
-  "skill": "{{skill_id}}",
-  "is_required": true
+  "status": "shortlisted"
 }
 ```
 
-**14b. List Job Skills**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/job-skills/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
+Valid statuses: `pending`, `reviewed`, `shortlisted`, `rejected`, `accepted`
 
 ---
 
-### ✅ Step 15 — Saved Jobs
+### 6.4 Add Application Review (HR/Admin)
 
-**15a. Save/Bookmark a Job** (as Job Seeker)
+```
+POST {{base_url}}/application-reviews/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/jobs/{{job_id}}/save_job/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-*(No body needed)*
-
-**15b. List My Saved Jobs**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/jobs/saved/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**15c. Unsave a Job**
-
-| Field | Value |
-|---|---|
-| **Method** | `DELETE` |
-| **URL** | `{{base_url}}/jobs/{{job_id}}/unsave_job/` |
-| **Auth** | Bearer `{{access_token}}` |
-
----
-
-## PHASE 5: Applications (Steps 16–17)
-
----
-
-### ✅ Step 16 — Job Applications (Job Seeker Only for Create)
-
-**16a. Apply to a Job** (as Job Seeker — User 1)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/applications/` |
-| **Auth** | Bearer `{{access_token}}` |
-
+**Body (JSON):**
 ```json
 {
-  "job": "{{job_id}}",
-  "cover_letter": "I am very interested in this position...",
-  "resume_url": "https://example.com/resume.pdf"
+  "application": "APPLICATION_UUID",
+  "rating": 4,
+  "notes": "Strong technical skills. Schedule interview."
 }
 ```
 
-🔑 **Save** `application_id` ← `data.id`
+---
 
-> ⚠️ Only `job_seeker` role can apply. If you use the admin token, you'll get a **403 Forbidden**.
+## 7. Chat
 
-**16b. List My Applications** (as Job Seeker)
+### 7.1 Create Direct Chat
 
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/applications/` |
-| **Auth** | Bearer `{{access_token}}` |
+```
+POST {{base_url}}/chat/direct/
+```
 
-**16c. List All Applications** (as Admin — sees all)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/applications/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
-**16d. Update Application Status** (Admin/HR only)
-
-| Field | Value |
-|---|---|
-| **Method** | `PATCH` |
-| **URL** | `{{base_url}}/applications/{{application_id}}/update_status/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
+**Body (JSON):**
 ```json
 {
-  "status": "reviewed"
+  "user_id": "OTHER_USER_UUID"
 }
 ```
 
-> Valid statuses: `pending`, `reviewed`, `accepted`, `rejected`
-
 ---
 
-### ✅ Step 17 — Application Reviews (Admin/HR Only)
+### 7.2 Create Group Chat
 
-**17a. Leave a Review on an Application**
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/application-reviews/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
-```json
-{
-  "application": "{{application_id}}",
-  "note": "Strong candidate. Good Python skills. Schedule for interview."
-}
+```
+POST {{base_url}}/chat/
 ```
 
-**17b. List All Reviews**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/application-reviews/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
----
-
-## PHASE 6: Connections (Step 18)
-
----
-
-### ✅ Step 18 — Connections (Networking)
-
-**18a. Send Connection Request** (User 1 → User 2)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/connections/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-```json
-{
-  "receiver": "{{user2_id}}"
-}
-```
-
-🔑 **Save** `connection_id` ← `data.id`
-
-**18b. List My Connections**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/connections/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**18c. View Pending Connections** (as User 2 — the receiver)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/connections/pending/` |
-| **Auth** | Bearer `{{access_token_2}}` |
-
-**18d. Accept Connection** (as User 2 — receiver only)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/connections/{{connection_id}}/accept/` |
-| **Auth** | Bearer `{{access_token_2}}` |
-
-*(No body needed)*
-
-> ⚠️ Only the **receiver** can accept/reject. Using the sender's token will return **403 Forbidden**.
-
-**18e. Reject Connection** (alternative to accept)
-```
-POST {{base_url}}/connections/{{connection_id}}/reject/
-Auth: Bearer {{access_token_2}}
-```
-
-**18f. Block Connection** (either participant)
-```
-POST {{base_url}}/connections/{{connection_id}}/block/
-Auth: Bearer {{access_token}} OR {{access_token_2}}
-```
-
----
-
-## PHASE 7: Chat (Step 19)
-
----
-
-### ✅ Step 19 — Chat System
-
-**19a. Create a Direct Message Chat** (User 1 with User 2)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/chat/direct/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-```json
-{
-  "user_id": "{{user2_id}}"
-}
-```
-
-🔑 **Save** `chat_room_id` ← `data.id`
-
-**19b. Create a Group Chat**
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/chat/` |
-| **Auth** | Bearer `{{access_token}}` |
-
+**Body (JSON):**
 ```json
 {
   "type": "group",
-  "name": "Project Team Chat",
-  "participant_ids": ["{{user2_id}}"]
+  "name": "Project Discussion",
+  "participant_ids": ["UUID_1", "UUID_2"]
 }
 ```
 
-**19c. List My Chat Rooms**
+---
 
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/chat/` |
-| **Auth** | Bearer `{{access_token}}` |
+### 7.3 Send a Message
 
-**19d. Send a Message**
+```
+POST {{base_url}}/chat/{room_id}/send_message/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/chat/{{chat_room_id}}/send_message/` |
-| **Auth** | Bearer `{{access_token}}` |
-
+**Body (JSON):**
 ```json
 {
-  "content": "Hello! How are you?",
+  "content": "Hey, are you available for a quick call?",
   "message_type": "text"
 }
 ```
 
-🔑 **Save** `message_id` ← `data.id`
+---
 
-**19e. Get Messages in a Room**
+### 7.4 Get Messages
 
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/chat/{{chat_room_id}}/messages/` |
-| **Auth** | Bearer `{{access_token}}` |
+```
+GET {{base_url}}/chat/{room_id}/messages/
+```
 
-**19f. Get Chat Participants**
+---
 
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/chat/{{chat_room_id}}/participants/` |
-| **Auth** | Bearer `{{access_token}}` |
+### 7.5 Mark Messages as Read
 
-**19g. Mark Messages as Read** (as User 2)
+```
+POST {{base_url}}/chat/{room_id}/mark_read/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/chat/{{chat_room_id}}/mark_read/` |
-| **Auth** | Bearer `{{access_token_2}}` |
-
+**Body (JSON):**
 ```json
 {
-  "message_ids": ["{{message_id}}"]
+  "message_ids": ["MSG_UUID_1", "MSG_UUID_2"]
 }
 ```
 
 ---
 
-## PHASE 8: Notifications (Step 20)
+### 7.6 List Participants
+
+```
+GET {{base_url}}/chat/{room_id}/participants/
+```
 
 ---
 
-### ✅ Step 20 — Notifications
+### 7.7 List My Chat Rooms
 
-> 📝 Notifications are typically generated by other actions (profile views, applications, etc.). You can create test notifications via the Django admin panel at `http://localhost:8000/admin/`.
-
-**20a. List My Notifications**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/notifications/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**20b. Get Unread Count**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/notifications/unread_count/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**20c. Mark a Notification as Read** (if you have a notification_id)
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/notifications/{{notification_id}}/mark_read/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**20d. Mark All Notifications as Read**
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/notifications/mark_all_read/` |
-| **Auth** | Bearer `{{access_token}}` |
+```
+GET {{base_url}}/chat/
+```
 
 ---
 
-## PHASE 9: File Uploads (Step 21)
+### 7.8 WebSocket Test (use Postman WebSocket tab)
+
+```
+ws://127.0.0.1:8000/ws/chat/{room_id}/
+```
+
+**Send message payload:**
+```json
+{
+  "type": "chat_message",
+  "content": "Hello from WebSocket!",
+  "message_type": "text",
+  "file_url": ""
+}
+```
+
+**Send read receipt:**
+```json
+{
+  "type": "read_receipt",
+  "message_id": "MESSAGE_UUID"
+}
+```
 
 ---
 
-### ✅ Step 21 — File Upload
+## 8. Notifications
 
-> ⚠️ **This endpoint requires `multipart/form-data`, NOT JSON.** Change the body type in Postman!
+### 8.1 List My Notifications
 
-**21a. Upload a File**
+```
+GET {{base_url}}/notifications/
+```
 
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/files/` |
-| **Auth** | Bearer `{{access_token}}` |
-| **Body Type** | **form-data** (NOT raw JSON!) |
+**With filters:**
+```
+GET {{base_url}}/notifications/?is_read=false
+GET {{base_url}}/notifications/?type=connection_request
+```
+
+---
+
+### 8.2 Mark One as Read
+
+```
+POST {{base_url}}/notifications/{notif_id}/mark_read/
+```
+
+---
+
+### 8.3 Mark All as Read
+
+```
+POST {{base_url}}/notifications/mark_all_read/
+```
+
+---
+
+### 8.4 Get Unread Count
+
+```
+GET {{base_url}}/notifications/unread_count/
+```
+
+**Expected:**
+```json
+{ "success": true, "message": "Unread count.", "data": { "count": 5 } }
+```
+
+---
+
+## 9. File Uploads
+
+### 9.1 Upload a File
+
+```
+POST {{base_url}}/files/
+```
+
+**Body Type:** `form-data`
 
 | Key | Type | Value |
 |---|---|---|
-| `file` | **File** | Select a file from your computer |
+| `file` | File | Select a file from your machine |
 | `entity_type` | Text | `resume` |
-| `entity_id` | Text | `{{user_id}}` |
-
-> 🚨 Make sure the Body type dropdown says **form-data**. If you send this as JSON, you'll get "No file provided."
-
-**21b. List My Uploaded Files**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/files/` |
-| **Auth** | Bearer `{{access_token}}` |
+| `entity_id` | Text | *(optional UUID)* |
 
 ---
 
-## PHASE 10: Courses (Step 22)
+### 9.2 List My Uploads
 
----
-
-### ✅ Step 22 — Course Search (YouTube API)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/courses/?query=python&max_results=5` |
-| **Auth** | Bearer `{{access_token}}` |
-
-> ⚠️ This requires a valid **YouTube Data API key** configured in your `.env` file. If not configured, you'll get an empty result or an error.
-
----
-
-## PHASE 11: User Management & Cleanup (Steps 23–24)
-
----
-
-### ✅ Step 23 — User Management (Admin Only)
-
-**23a. List All Users** (Admin/HR only)
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/users/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
-**23b. User Lookup by ID**
-
-| Field | Value |
-|---|---|
-| **Method** | `GET` |
-| **URL** | `{{base_url}}/auth/user/{{user2_id}}/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-**23c. Update a User** (Admin)
-
-| Field | Value |
-|---|---|
-| **Method** | `PATCH` |
-| **URL** | `{{base_url}}/users/{{user2_id}}/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
-```json
-{
-  "displayName": "Updated Name"
-}
 ```
-
-**23d. Deactivate a User** (Admin only — soft delete)
-
-| Field | Value |
-|---|---|
-| **Method** | `DELETE` |
-| **URL** | `{{base_url}}/users/{{user2_id}}/` |
-| **Auth** | Bearer `{{access_token_admin}}` |
-
----
-
-### ✅ Step 24 — Logout
-
-| Field | Value |
-|---|---|
-| **Method** | `POST` |
-| **URL** | `{{base_url}}/auth/logout/` |
-| **Auth** | Bearer `{{access_token}}` |
-
-```json
-{
-  "refresh": "{{refresh_token}}"
-}
+GET {{base_url}}/files/
 ```
 
 ---
 
-## 🚨 Common Errors & Fixes
+## 10. Courses (YouTube)
 
-| Error | Cause | Fix |
+### 10.1 Search Courses
+
+```
+GET {{base_url}}/courses/?query=python django tutorial
+```
+
+**With max results:**
+```
+GET {{base_url}}/courses/?query=machine+learning&max_results=10
+```
+
+> ⚠️ Requires `YOUTUBE_API_KEY` in `.env`
+
+---
+
+## 11. 🤖 AI Assistant
+
+The unified AI endpoint. ONE endpoint, THREE capabilities.
+
+### 11.1 Generate a Resume
+
+```
+POST {{base_url}}/ai/assistant/
+```
+
+**Body (JSON):**
+```json
+{
+  "message": "Create a resume for a backend developer",
+  "job_title": "Senior Backend Developer"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "AI response ready.",
+  "data": {
+    "intent": "resume_generate",
+    "message": "Resume generated successfully.",
+    "corrections": [],
+    "resume_text": "# John Doe\n## Senior Backend Developer\n...",
+    "pdf_url": "/media/resumes/resume_abc123_20260422_xyz.pdf",
+    "pdf_required": true
+  }
+}
+```
+
+📥 **Download the PDF:** Open `http://127.0.0.1:8000{pdf_url}` in your browser.
+
+---
+
+### 11.2 Improve / Review a Resume
+
+```
+POST {{base_url}}/ai/assistant/
+```
+
+**Body (JSON):**
+```json
+{
+  "message": "Review my resume and suggest improvements",
+  "resume": "John Doe\nBackend Developer\n3 years experience in Python and Django.\nWorked at XYZ company.\nSkills: Python, Django, SQL",
+  "job_title": "Senior Backend Developer"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "AI response ready.",
+  "data": {
+    "intent": "resume_improve",
+    "message": "Resume reviewed successfully.",
+    "corrections": [
+      "Add quantifiable achievements (e.g., 'Reduced API response time by 40%')",
+      "Include a professional summary at the top",
+      "Expand skills section with specific frameworks and tools",
+      "Add education details"
+    ],
+    "resume_text": "",
+    "pdf_url": "",
+    "pdf_required": false
+  }
+}
+```
+
+---
+
+### 11.3 Career Chat / Advice
+
+```
+POST {{base_url}}/ai/assistant/
+```
+
+**Body (JSON):**
+```json
+{
+  "message": "What skills should I learn to become a full stack developer in 2026?"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "AI response ready.",
+  "data": {
+    "intent": "career_chat",
+    "message": "To become a full stack developer in 2026, focus on...",
+    "corrections": [],
+    "resume_text": "",
+    "pdf_url": "",
+    "pdf_required": false
+  }
+}
+```
+
+---
+
+### 11.4 More AI Test Messages
+
+Try these to see intent detection in action:
+
+| Message | Expected Intent |
+|---|---|
+| `"Build me a resume"` | `resume_generate` |
+| `"Make a resume for data scientist"` | `resume_generate` |
+| `"Write my resume"` | `resume_generate` |
+| `"Fix my resume"` | `resume_improve` |
+| `"Check my resume for errors"` | `resume_improve` |
+| `"Optimize my resume for ATS"` | `resume_improve` |
+| `"How do I prepare for an interview?"` | `career_chat` |
+| `"What salary should I expect as a fresher?"` | `career_chat` |
+| `"Tips for switching from QA to development"` | `career_chat` |
+
+---
+
+## 🧪 Quick Smoke Test Checklist
+
+Run through this after a fresh server start:
+
+- [ ] `POST /auth/signup/` → get OTP
+- [ ] `POST /auth/verify_signup/` → verify OTP
+- [ ] `POST /auth/login/` → get tokens
+- [ ] `GET /auth/me/` → see user data
+- [ ] `GET /profiles/me/` → see profile
+- [ ] `POST /jobs/` → create a job (as admin)
+- [ ] `GET /jobs/` → list jobs
+- [ ] `POST /applications/` → apply to a job
+- [ ] `POST /chat/direct/` → create a DM
+- [ ] `POST /chat/{id}/send_message/` → send a message
+- [ ] `POST /ai/assistant/` → career chat
+- [ ] `POST /ai/assistant/` → generate resume (check PDF download)
+- [ ] `POST /ai/assistant/` → improve resume (check corrections)
+- [ ] `POST /auth/logout/` → revoke token
+
+---
+
+## 🔑 Testing Different Roles
+
+Create users with different roles to test RBAC:
+
+| Role | Signup `role` value | Activation |
 |---|---|---|
-| `401 Unauthorized` | Missing or expired access token | Login again to get a fresh token |
-| `403 Forbidden` | Wrong role (e.g., job_seeker trying to create a job) | Switch to Admin/HR token |
-| `403 "Account not active"` | HR user needs admin activation | Use Django admin to set `is_active=True` |
-| `400 "Invalid or expired OTP"` | OTP expired (5 min limit) | Re-do signup to get a new OTP |
-| `400 "Email already exists"` | Duplicate signup | Use a different email or login instead |
-| `400 "Already applied to this job"` | Duplicate application | Each user can only apply once per job |
-| `400 "Connection already exists"` | Duplicate connection request | Check existing connections first |
-| `400 "No file provided"` | File upload sent as JSON | Change body type to **form-data** |
-| `404 Not Found` | Wrong UUID in URL | Double-check the ID you saved |
-| `405 Method Not Allowed` | Wrong HTTP method | Check the method (GET/POST/PATCH/DELETE) |
+| Job Seeker | `"job_seeker"` | Active immediately |
+| HR | `"hr"` | Requires admin activation via `/admin/` |
+| Admin | — | Created via `python manage.py createsuperuser` |
 
----
+### Role Permissions Summary
 
-## 🎯 Quick Reference: Which Token to Use
-
-| Action | Token |
-|---|---|
-| Signup, Verify, Login | ❌ No token needed |
-| Browse jobs, profiles, skills | `access_token` (any user) |
-| Create jobs, organizations, skills | `access_token_admin` |
-| Apply to jobs | `access_token` (job_seeker only) |
-| Review applications, update status | `access_token_admin` |
-| Accept/reject connections | Token of the **receiver** |
-| Send chat messages | Token of any **participant** |
-| Upload files | Any authenticated user |
-| Manage users (list/update/delete) | `access_token_admin` |
+| Endpoint | job_seeker | hr | admin |
+|---|---|---|---|
+| AI Resume features | ✅ | ❌ | ✅ |
+| AI Career chat | ✅ | ✅ | ✅ |
+| Create job post | ❌ | ✅ | ✅ |
+| Apply to job | ✅ | ❌ | ❌ |
+| Review applications | ❌ | ✅ | ✅ |
+| Create organization | ❌ | ✅ | ✅ |
+| Delete anything | ❌ | ❌ | ✅ |
