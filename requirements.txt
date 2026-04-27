@@ -25,7 +25,8 @@ PyJWT==2.10.1
 requests==2.32.3
 
 # PDF Generation (AI resume feature)
-fpdf2==2.8.7
+markdown==3.10.2
+weasyprint==64.0
 
 # Database (production)
 psycopg2-binary==2.9.10

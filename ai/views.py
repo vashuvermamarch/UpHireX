@@ -20,7 +20,7 @@ from uphirex.utils import api_response
 from authapp.decorators import IsJobSeeker
 
 from .services.router import route_request
-from .services.pdf_service import generate_resume_pdf
+from .services.pdf_service import generate_resume_pdf_buffer
 from .services.pdf_utils import extract_text_from_pdf
 
 from chat.models import ChatRoom, ChatParticipant, Message
@@ -90,12 +90,10 @@ class AIAssistantView(APIView):
         result = route_request(message, resume=resume_text, job_title=job_title)
 
         # ── Generate PDF for resume_generate ────────────────
-        pdf_path = ''
+        pdf_buffer = None
+        pdf_filename = f"resume_{request.user.id}.pdf"
         if result.get('pdf_required') and result.get('resume_text'):
-            pdf_result = generate_resume_pdf(
-                result['resume_text'], str(request.user.id),
-            )
-            pdf_path = pdf_result.get('pdf_path', '')
+            pdf_buffer = generate_resume_pdf_buffer(result['resume_text'])
 
         # ── Store in chat memory ────────────────────────────
         self._store_conversation(
@@ -108,12 +106,12 @@ class AIAssistantView(APIView):
         )
 
         # ── Return PDF directly if generated ────────────────
-        if pdf_path and os.path.exists(pdf_path):
+        if pdf_buffer:
             return FileResponse(
-                open(pdf_path, 'rb'),
+                pdf_buffer,
                 content_type='application/pdf',
-                as_attachment=True,
-                filename=os.path.basename(pdf_path)
+                as_attachment=False,
+                filename=pdf_filename
             )
 
         # ── Otherwise return JSON ───────────────────────────
