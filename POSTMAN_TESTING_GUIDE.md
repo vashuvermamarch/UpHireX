@@ -56,7 +56,7 @@ POST {{base_url}}/auth/signup/
 }
 ```
 
-**Expected:** `200 OK` – Returns OTP. Copy the `otp` from the response.
+**Expected:** `200 OK` – Returns success message. Check your **email** (or terminal if in development) to retrieve the OTP.
 
 ---
 
@@ -207,7 +207,7 @@ GET {{base_url}}/profiles/me/
 ### 3.2 Update Profile
 
 ```
-PATCH {{base_url}}/profiles/{profile_id}/
+PATCH {{base_url}}/profiles/me/
 ```
 
 **Body (JSON):**
@@ -787,7 +787,7 @@ Try these to see intent detection in action:
 
 Run through this after a fresh server start:
 
-- [ ] `POST /auth/signup/` → get OTP
+- [ ] `POST /auth/signup/` → check email for OTP
 - [ ] `POST /auth/verify_signup/` → verify OTP
 - [ ] `POST /auth/login/` → get tokens
 - [ ] `GET /auth/me/` → see user data

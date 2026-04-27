@@ -16,7 +16,11 @@ class TeamViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated(), IsHROrAdmin()]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        team = serializer.save(created_by=self.request.user)
+        # Automatically link HR creator to their team
+        if self.request.user.role == 'hr' and not self.request.user.organization_id:
+            self.request.user.organization_id = team
+            self.request.user.save(update_fields=['organization_id'])
 
     def destroy(self, request, *args, **kwargs):
         if request.user.role != 'admin':

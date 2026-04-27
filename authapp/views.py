@@ -13,6 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from uphirex.utils import api_response
+from uphirex.email_utils import send_otp_email
 from .models import User, RefreshToken, SessionAudit
 from .serializers import UserRegistrationSerializer, UserSerializer, UserUpdateSerializer
 from .custom_tokens import CustomRefreshToken
@@ -54,8 +55,11 @@ class AuthViewSet(viewsets.GenericViewSet):
         otp = str(randint(100000, 999999))
         cache.set(f'otp_signup_{email}', {"otp": otp, "data": serializer.validated_data}, timeout=300)
 
+        # Send OTP via email
+        send_otp_email(email, otp)
+
         return api_response(True, "OTP sent successfully.", {
-            "email": email, "otp": otp  # In production, send via SMS/email only
+            "email": email
         }, status.HTTP_200_OK)
 
     # ── VERIFY SIGNUP ─────────────────────────────────

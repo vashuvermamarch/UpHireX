@@ -18,14 +18,25 @@ class JobPostViewSet(viewsets.ModelViewSet):
         return JobPost.objects.select_related('posted_by', 'organization_id').all()
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'save_job', 'unsave_job', 'saved']:
             return [IsAuthenticated()]
         if self.action == 'destroy':
             return [IsAuthenticated(), IsAdmin()]
         return [IsAuthenticated(), IsHROrAdmin()]
 
     def perform_create(self, serializer):
-        serializer.save(posted_by=self.request.user, organization_id=self.request.user.organization_id)
+        org_id = self.request.user.organization_id
+        
+        # Fallback: if user is HR and has no org_id set, try to find one they created
+        if not org_id and self.request.user.role == 'hr':
+            from organizations.models import Team
+            org_id = Team.objects.filter(created_by=self.request.user).first()
+            if org_id:
+                # Sync back to user profile for future requests
+                self.request.user.organization_id = org_id
+                self.request.user.save(update_fields=['organization_id'])
+
+        serializer.save(posted_by=self.request.user, organization_id=org_id)
 
     def update(self, request, *args, **kwargs):
         job = self.get_object()
@@ -57,7 +68,12 @@ class JobPostViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def save_job(self, request, pk=None):
-        job = self.get_object()
+        from .utils import get_or_create_shadow_job
+        job, error = get_or_create_shadow_job(pk, requester=request.user)
+        
+        if error:
+            return api_response(False, error, status_code=status.HTTP_404_NOT_FOUND)
+
         saved, created = SavedJob.objects.get_or_create(user=request.user, job=job)
         if not created:
             return api_response(False, "Job already saved.", status_code=status.HTTP_400_BAD_REQUEST)

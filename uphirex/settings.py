@@ -161,6 +161,7 @@ CHANNEL_LAYERS = {
 ADZUNA_APP_ID = env('ADZUNA_APP_ID', default='')
 ADZUNA_APP_KEY = env('ADZUNA_APP_KEY', default='')
 YOUTUBE_API_KEY = env('YOUTUBE_API_KEY', default='')
+GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
 
-# Opal AI Agents
+# Opal AI Agents (Legacy - being replaced by Gemini)
 OPAL_API_KEY = env('OPAL_API_KEY', default='')

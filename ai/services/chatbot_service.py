@@ -2,7 +2,7 @@
 Chatbot Service — General career chatbot via Opal Career Chatbot Agent.
 """
 import logging
-from .opal_client import call_opal_agent
+from .gemini_client import call_gemini_agent
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def career_chat(payload):
         {'message': 'AI reply ...'} on success
         {'message': 'Sorry, ...', 'error': '...'} on failure
     """
-    result = call_opal_agent('career_chat', payload)
+    result = call_gemini_agent('career_chat', payload)
 
     if result.get('success'):
         message = result.get('response', '')

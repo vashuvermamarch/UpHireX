@@ -8,16 +8,20 @@ generates PDF if needed, stores conversation in the chat system, and
 returns a structured response.
 """
 import logging
+import os
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
+from django.http import FileResponse
 
 from uphirex.utils import api_response
 from authapp.decorators import IsJobSeeker
 
 from .services.router import route_request
 from .services.pdf_service import generate_resume_pdf
+from .services.pdf_utils import extract_text_from_pdf
 
 from chat.models import ChatRoom, ChatParticipant, Message
 
@@ -31,29 +35,24 @@ class AIAssistantView(APIView):
     """
     POST /api/v1/ai/assistant/
 
-    Body:
-        {
-            "message":   "Create a resume for a backend developer",
-            "resume":    "... existing resume text (optional) ...",
-            "job_title": "Backend Developer (optional)"
-        }
+    Accepts:
+        - JSON (application/json)
+        - Form Data (multipart/form-data)
 
-    Response:
-        {
-            "intent":       "resume_generate",
-            "message":      "Resume generated successfully.",
-            "corrections":  [],
-            "resume_text":  "...",
-            "pdf_url":      "/media/resumes/resume_xxx.pdf",
-            "pdf_required": true
-        }
+    Body Fields:
+        "message":       "Create a resume for a backend developer"
+        "resume":        "... existing resume text (optional) ..."
+        "resume_file":   [PDF File Object] (optional)
+        "job_title":     "Backend Developer (optional)"
     """
 
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def post(self, request):
         message = request.data.get('message', '').strip()
-        resume = request.data.get('resume', '').strip()
+        resume_text = request.data.get('resume', '').strip()
+        resume_file = request.FILES.get('resume_file')
         job_title = request.data.get('job_title', '').strip()
 
         if not message:
@@ -61,6 +60,18 @@ class AIAssistantView(APIView):
                 False, 'Message is required.',
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+
+        # ── Handle PDF upload ──────────────────────────────
+        if resume_file:
+            extracted_text = extract_text_from_pdf(resume_file)
+            if extracted_text:
+                resume_text = extracted_text
+                logger.info(f"Extracted {len(resume_text)} characters from PDF.")
+            else:
+                return api_response(
+                    False, 'Failed to extract text from the provided PDF.',
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
 
         # ── RBAC: resume features restricted to job_seeker ──
         # (career_chat is open to all authenticated users)
@@ -76,15 +87,15 @@ class AIAssistantView(APIView):
                 )
 
         # ── Route to the correct agent ──────────────────────
-        result = route_request(message, resume=resume, job_title=job_title)
+        result = route_request(message, resume=resume_text, job_title=job_title)
 
         # ── Generate PDF for resume_generate ────────────────
-        pdf_url = ''
+        pdf_path = ''
         if result.get('pdf_required') and result.get('resume_text'):
             pdf_result = generate_resume_pdf(
                 result['resume_text'], str(request.user.id),
             )
-            pdf_url = pdf_result.get('pdf_url', '')
+            pdf_path = pdf_result.get('pdf_path', '')
 
         # ── Store in chat memory ────────────────────────────
         self._store_conversation(
@@ -92,17 +103,25 @@ class AIAssistantView(APIView):
             user_message=message,
             ai_response=result.get('message') or result.get('resume_text', ''),
             intent=intent,
-            resume=resume,
+            resume=resume_text,
             job_title=job_title,
         )
 
-        # ── Build unified response ──────────────────────────
+        # ── Return PDF directly if generated ────────────────
+        if pdf_path and os.path.exists(pdf_path):
+            return FileResponse(
+                open(pdf_path, 'rb'),
+                content_type='application/pdf',
+                as_attachment=True,
+                filename=os.path.basename(pdf_path)
+            )
+
+        # ── Otherwise return JSON ───────────────────────────
         response_data = {
             'intent': result.get('intent', intent),
             'message': result.get('message', ''),
             'corrections': result.get('corrections', []),
             'resume_text': result.get('resume_text', ''),
-            'pdf_url': pdf_url,
             'pdf_required': result.get('pdf_required', False),
         }
 

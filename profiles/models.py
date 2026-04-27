@@ -19,7 +19,13 @@ class Profile(models.Model):
     total_experience = models.IntegerField(default=0)
     availability_status = models.CharField(
         max_length=20,
-        choices=[('active', 'Active'), ('busy', 'Busy'), ('unavailable', 'Unavailable')],
+        choices=[
+            ('active', 'Active'),
+            ('busy', 'Busy'),
+            ('unavailable', 'Unavailable'),
+            ('open_to_work', 'Open to Work'),
+            ('hired', 'Hired')
+        ],
         default='active',
     )
     updated_at = models.DateTimeField(auto_now=True)
@@ -41,6 +47,9 @@ class Skill(models.Model):
 
     class Meta:
         db_table = 'skills'
+        verbose_name = "Platform Skill"
+        verbose_name_plural = "Platform Skills"
+        ordering = ['name']
 
     def __str__(self):
         return self.name

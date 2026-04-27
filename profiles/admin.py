@@ -14,6 +14,7 @@ class SkillAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'created_at')
     search_fields = ('name', 'category')
     list_filter = ('category',)
+    ordering = ('name',)
 
 
 @admin.register(UserSkill)

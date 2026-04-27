@@ -9,6 +9,7 @@ class JobApplication(models.Model):
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
         REVIEWED = 'reviewed', 'Reviewed'
+        SHORTLISTED = 'shortlisted', 'Shortlisted'
         ACCEPTED = 'accepted', 'Accepted'
         REJECTED = 'rejected', 'Rejected'
 
@@ -21,10 +22,10 @@ class JobApplication(models.Model):
         'jobs.JobPost', on_delete=models.CASCADE,
         related_name='applications',
     )
-    resume_url = models.URLField(max_length=500, blank=True, default='')
+    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
     cover_letter = models.TextField(blank=True, default='')
     applied_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

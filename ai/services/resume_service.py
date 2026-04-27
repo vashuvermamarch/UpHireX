@@ -5,7 +5,7 @@ Resume Service — Handles resume generation and improvement via Opal agents.
 - improve_resume()   → calls Resume Improvement Agent → returns corrections
 """
 import logging
-from .opal_client import call_opal_agent
+from .gemini_client import call_gemini_agent
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def generate_resume(payload):
         {'resume_text': '...'} on success
         {'resume_text': '', 'error': '...'} on failure
     """
-    result = call_opal_agent('resume_generate', payload)
+    result = call_gemini_agent('resume_generate', payload)
 
     if result.get('success'):
         resume_text = result.get('response', '')
@@ -58,7 +58,7 @@ def improve_resume(payload):
             'error': 'Please provide your existing resume text for review.',
         }
 
-    result = call_opal_agent('resume_improve', payload)
+    result = call_gemini_agent('resume_improve', payload)
 
     if result.get('success'):
         response_text = result.get('response', '')

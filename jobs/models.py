@@ -7,11 +7,13 @@ class JobPost(models.Model):
     """Job posting per schema."""
 
     class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
         OPEN = 'open', 'Open'
         CLOSED = 'closed', 'Closed'
         DRAFT = 'draft', 'Draft'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    external_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, default='')
     requirements = models.TextField(blank=True, default='')
@@ -27,7 +29,7 @@ class JobPost(models.Model):
         null=True, blank=True, related_name='job_posts',
         db_column='organization_id',
     )
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     expires_at = models.DateTimeField(null=True, blank=True)
