@@ -31,7 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'email', 'displayName', 'profile_photo_url',
+            'id', 'username', 'email', 'displayName', 'profile_photo_url', 'profile_photo',
             'bio', 'role', 'is_active', 'email_verified', 'phone',
             'phone_verified', 'two_factor_enabled', 'last_login',
             'organization_id', 'created_at', 'updated_at',
@@ -43,11 +43,19 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, min_length=8)
+
     class Meta:
         model = User
         fields = (
-            'displayName', 'profile_photo_url', 'bio', 'phone',
+            'displayName', 'profile_photo_url', 'profile_photo', 'bio', 'phone', 'password',
         )
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)
 
 
 class RefreshTokenSerializer(serializers.ModelSerializer):

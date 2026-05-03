@@ -66,6 +66,7 @@ def search_adzuna_jobs(query='', location='', page=1, country='in'):
                 'apply_url': item.get('redirect_url', ''),
                 'description': item.get('description', '')[:300],
                 'source': 'adzuna',
+                'hiring_type': 'job',
                 'created_at': item.get('created', ''),
             })
 

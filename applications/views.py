@@ -79,6 +79,15 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
                 reference_id=application.id,
                 reference_type='application'
             )
+            
+            # Send Email
+            from uphirex.email_utils import send_application_status_email
+            send_application_status_email(
+                email=application.user.email,
+                display_name=application.user.displayName or application.user.username,
+                job_title=application.job.title,
+                new_status=new_status
+            )
 
         return api_response(True, "Status updated.", JobApplicationSerializer(application).data, status.HTTP_200_OK)
 

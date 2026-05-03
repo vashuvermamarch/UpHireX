@@ -5,6 +5,7 @@ from .models import JobPost, JobSkill, SavedJob
 class JobPostSerializer(serializers.ModelSerializer):
     posted_by_name = serializers.CharField(source='posted_by.displayName', read_only=True)
     organization_name = serializers.CharField(source='organization_id.name', read_only=True, default='')
+    apply_url = serializers.URLField(source='external_url', read_only=True)
 
     class Meta:
         model = JobPost
@@ -39,4 +40,5 @@ class ExternalJobSerializer(serializers.Serializer):
     apply_url = serializers.URLField()
     description = serializers.CharField()
     source = serializers.CharField()
+    hiring_type = serializers.CharField()
     created_at = serializers.CharField()

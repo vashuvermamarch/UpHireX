@@ -16,6 +16,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     displayName = models.CharField(max_length=255, blank=True, default='')
     profile_photo_url = models.URLField(max_length=500, blank=True, default='')
+    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
     bio = models.TextField(blank=True, default='')
     role = models.CharField(
         max_length=20,

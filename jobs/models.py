@@ -12,6 +12,10 @@ class JobPost(models.Model):
         CLOSED = 'closed', 'Closed'
         DRAFT = 'draft', 'Draft'
 
+    class HiringType(models.TextChoices):
+        JOB = 'job', 'Job'
+        INTERNSHIP = 'internship', 'Internship'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     external_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
     title = models.CharField(max_length=255)
@@ -20,6 +24,12 @@ class JobPost(models.Model):
     salary_range = models.CharField(max_length=100, blank=True, default='')
     location = models.CharField(max_length=255, blank=True, default='')
     remote = models.BooleanField(default=False)
+    external_url = models.URLField(max_length=500, blank=True, default='')
+    hiring_type = models.CharField(
+        max_length=20,
+        choices=HiringType.choices,
+        default=HiringType.JOB
+    )
     posted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='job_posts',

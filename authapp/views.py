@@ -181,8 +181,14 @@ class AuthViewSet(viewsets.GenericViewSet):
             return api_response(False, "Invalid refresh token.", status_code=status.HTTP_400_BAD_REQUEST)
 
     # ── PROTECTED VIEW ────────────────────────────────
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):
+        if request.method == 'PATCH':
+            serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+            if not serializer.is_valid():
+                return api_response(False, "Invalid data.", serializer.errors, status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return api_response(True, "Profile updated.", UserSerializer(request.user).data, status.HTTP_200_OK)
         return api_response(True, "Authenticated user.", UserSerializer(request.user).data, status.HTTP_200_OK)
 
     # ── USER LOOKUP ───────────────────────────────────
@@ -191,6 +197,34 @@ class AuthViewSet(viewsets.GenericViewSet):
         try:
             user = User.objects.get(id=user_id)
             return api_response(True, "User found.", UserSerializer(user).data, status.HTTP_200_OK)
+        except (User.DoesNotExist, ValueError):
+            return api_response(False, "User not found.", status_code=status.HTTP_404_NOT_FOUND)
+
+    # ── PROFILE PHOTO ─────────────────────────────────
+    @action(detail=False, methods=['get'], url_path='me/photo', permission_classes=[IsAuthenticated])
+    def my_photo(self, request):
+        user = request.user
+        if not user.profile_photo and not user.profile_photo_url:
+            return api_response(False, "No profile photo found.", status_code=status.HTTP_404_NOT_FOUND)
+        
+        data = {
+            "profile_photo": request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
+            "profile_photo_url": user.profile_photo_url
+        }
+        return api_response(True, "Profile photo retrieved.", data, status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path=r'user/(?P<user_id>[^/.]+)/photo')
+    def user_photo(self, request, user_id=None):
+        try:
+            user = User.objects.get(id=user_id)
+            if not user.profile_photo and not user.profile_photo_url:
+                return api_response(False, "No profile photo found for this user.", status_code=status.HTTP_404_NOT_FOUND)
+            
+            data = {
+                "profile_photo": request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
+                "profile_photo_url": user.profile_photo_url
+            }
+            return api_response(True, "User profile photo retrieved.", data, status.HTTP_200_OK)
         except (User.DoesNotExist, ValueError):
             return api_response(False, "User not found.", status_code=status.HTTP_404_NOT_FOUND)
 

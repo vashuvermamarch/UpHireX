@@ -43,6 +43,7 @@ def get_or_create_shadow_job(job_id, requester=None):
         description=job_data['description'],
         location=job_data['location'],
         salary_range=job_data['salary_range'],
+        external_url=job_data.get('apply_url', ''),
         posted_by=admin_user,
         status='active'
     )

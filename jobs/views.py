@@ -10,7 +10,7 @@ from .services.adzuna_service import search_adzuna_jobs
 
 class JobPostViewSet(viewsets.ModelViewSet):
     serializer_class = JobPostSerializer
-    filterset_fields = ['status', 'remote', 'location']
+    filterset_fields = ['status', 'remote', 'location', 'hiring_type']
     search_fields = ['title', 'description', 'requirements']
     ordering_fields = ['created_at', 'title']
 
@@ -18,7 +18,7 @@ class JobPostViewSet(viewsets.ModelViewSet):
         return JobPost.objects.select_related('posted_by', 'organization_id').all()
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'save_job', 'unsave_job', 'saved']:
+        if self.action in ['list', 'retrieve', 'save_job', 'unsave_job', 'saved', 'internships']:
             return [IsAuthenticated()]
         if self.action == 'destroy':
             return [IsAuthenticated(), IsAdmin()]
@@ -91,6 +91,13 @@ class JobPostViewSet(viewsets.ModelViewSet):
     def saved(self, request):
         saved = SavedJob.objects.filter(user=request.user).select_related('job')
         return api_response(True, "Saved jobs.", SavedJobSerializer(saved, many=True).data, status.HTTP_200_OK)
+    @action(detail=False, methods=['get'])
+    def internships(self, request):
+        """Dedicated endpoint for internships."""
+        # Force filter to internship
+        request.query_params._mutable = True
+        request.query_params['hiring_type'] = 'internship'
+        return self.list(request)
 
 
 class JobSkillViewSet(viewsets.ModelViewSet):
